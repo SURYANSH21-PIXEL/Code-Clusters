@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+     <body>
+    <h1>Face Attendance</h1>
+    <video id="video" width="320" height="240" autoplay></video><br>
+    <button id="snap">Capture & Mark</button>
+    <canvas id="canvas" width="320" height="240" style="display:none"></canvas>
+    <div id="result"></div>
+
+    <script>
+      const video = document.getElementById('video');
+
+      // Start camera
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(e => alert('Camera error: ' + e));
+
+      document.getElementById('snap').addEventListener('click', async () => {
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Draw frame from video
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to data URL
+        const dataUrl = canvas.toDataURL('image/jpeg');
+
+        // Convert data URL → Blob
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+
+        const form = new FormData();
+        form.append('image', blob, 'capture.jpg');
+
+          const resp = await fetch('http://127.0.0.1:8000/attendance/api/mark/face/', {
+              method: 'POST',
+             body: form,
+             });
+
+        try {
+          const resp = await fetch('/attendance/api/mark/face/', {
+            method: 'POST',
+            body: form,
+          });
+
+          const j = await resp.json();
+          document.getElementById('result').innerText = JSON.stringify(j, null, 2);
+
+          if (j.ok && j.message === "Attendance marked") {
+            alert("Your attendance is completed!");
+          } else if (j.ok && j.message === "Already marked") {
+            alert("Your attendance is already marked for today.");
+          } else {
+            alert("Failed: " + (j.error || j.message || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Network or server error");
+        }
+      });
+    </script>
+  </body>
+</body>
+</html>
+
+<!-- 
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Face Mark</title>
+  </head>
+ 
+</html> -->
